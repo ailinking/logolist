@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client"
 import { CURATED_CATEGORIES, TOP_100_COMPANIES } from "@/lib/curatedData"
 
 const prisma = new PrismaClient()
-const BRANDFETCH_API_KEY = process.env.BRANDFETCH_API_KEY || "YOUR_KEY"
+const BRANDFETCH_API_KEY = process.env.BRANDFETCH_API_KEY
 
 interface EnrichedCompany {
   id: number | string
