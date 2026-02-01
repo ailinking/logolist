@@ -17,7 +17,7 @@ interface EnrichedCompany {
     name: string;
     domain: string;
     logoUrl: string;
-    description?: string;
+    description?: string | null;
     downloadCount: number;
     isExternal?: boolean;
     resolutions?: Record<string, string>; // e.g. { "original": "url", "512x512": "url" }
