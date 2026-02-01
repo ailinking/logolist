@@ -1,7 +1,7 @@
 'use client'
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
-import { FaDownload } from 'react-icons/fa'
+import { FaDownload, FaImage } from 'react-icons/fa'
 
 interface Company {
   id: number | string
@@ -13,6 +13,9 @@ interface Company {
 }
 
 export default function CompanyCard({ company }: { company: Company }) {
+  const [imgSrc, setImgSrc] = useState(company.logoUrl)
+  const [imgError, setImgError] = useState(false)
+
   const handleDownload = async () => {
     // If external, save it to DB first
     if (company.isExternal) {
@@ -23,8 +26,9 @@ export default function CompanyCard({ company }: { company: Company }) {
            body: JSON.stringify(company)
          })
          const saved = await res.json()
-         // Use the new real ID for download tracking
-         await fetch(`/api/companies/${saved.id}/download`, { method: 'POST' })
+         // Use the new real ID for download tracking if saved successfully
+         const downloadId = saved.id || company.id
+         await fetch(`/api/companies/${downloadId}/download`, { method: 'POST' })
        } catch (e) {
          console.error('Failed to save external company', e)
        }
@@ -34,7 +38,7 @@ export default function CompanyCard({ company }: { company: Company }) {
     
     // Trigger download
     const link = document.createElement('a')
-    link.href = company.logoUrl
+    link.href = imgSrc
     link.download = `${company.name}-logo.png`
     link.target = '_blank'
     document.body.appendChild(link)
@@ -49,20 +53,36 @@ export default function CompanyCard({ company }: { company: Company }) {
            Global
          </div>
       )}
-      <div className="w-32 h-32 relative mb-4">
-        <Image 
-          src={company.logoUrl} 
-          alt={`${company.name} logo`} 
-          fill
-          className="object-contain"
-          unoptimized 
-        />
+      <div className="w-32 h-32 relative mb-4 flex items-center justify-center bg-gray-50 rounded-lg">
+        {!imgError ? (
+          <Image 
+            src={imgSrc} 
+            alt={`${company.name} logo`} 
+            fill
+            className="object-contain p-2"
+            unoptimized 
+            onError={() => {
+              // Try fallback if primary fails (e.g. clearbit -> google)
+              if (imgSrc.includes('clearbit')) {
+                setImgSrc(`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${company.domain}&size=256`)
+              } else {
+                setImgError(true)
+              }
+            }}
+          />
+        ) : (
+          <div className="text-gray-300 flex flex-col items-center justify-center h-full w-full">
+            <FaImage size={32} />
+            <span className="text-xs mt-1">No Logo</span>
+          </div>
+        )}
       </div>
-      <h3 className="text-lg font-bold mb-1 text-black text-center">{company.name}</h3>
-      <p className="text-sm text-gray-500 mb-4">{company.domain}</p>
+      <h3 className="text-lg font-bold mb-1 text-black text-center truncate w-full">{company.name}</h3>
+      <p className="text-sm text-gray-500 mb-4 truncate w-full text-center">{company.domain}</p>
       <button 
         onClick={handleDownload}
-        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full justify-center cursor-pointer"
+        disabled={imgError}
+        className={`flex items-center gap-2 text-white px-4 py-2 rounded w-full justify-center cursor-pointer ${imgError ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
       >
         <FaDownload /> Download
       </button>
