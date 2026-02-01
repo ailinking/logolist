@@ -26,11 +26,11 @@ export default function Home() {
     setCurrentCategory(category || null)
 
     try {
-      let url = /api/companies
+      let url = \/api/companies\
       if (category) {
-        url += ?category=
+        url += \?category=\\
       } else if (q) {
-        url += ?query=
+        url += \?query=\\
       }
       
       const res = await fetch(url)
@@ -74,7 +74,7 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-6">       
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <span className="bg-black w-1 h-6 rounded-full block"></span>
-                        {currentCategory ? Top  Companies : (query ? "Search Results" : "Global Top 100")}
+                        {currentCategory ? \Top \ Companies\ : (query ? "Search Results" : "Global Top 100")}
                     </h2>
                     <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm">
                         {logos.length} results
