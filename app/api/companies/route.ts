@@ -1,225 +1,185 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
+import { CURATED_CATEGORIES, TOP_100_COMPANIES } from "../../lib/curatedData"
 
 const prisma = new PrismaClient()
-
-interface BrandfetchCompany {
-  brandId: string
-  name: string
-  domain: string
-  icon: string
-  claimed?: boolean
-}
+const BRANDFETCH_API_KEY = process.env.BRANDFETCH_API_KEY || "YOUR_KEY"
 
 interface EnrichedCompany {
-    id: number | string;
-    name: string;
-    domain: string;
-    logoUrl: string;
-    description?: string | null;
-    downloadCount: number;
-    isExternal?: boolean;
-    resolutions?: Record<string, string>;
-    source?: string;
-    type?: "logo" | "favicon";
+  id: number | string
+  name: string
+  domain: string
+  logoUrl: string
+  description: string
+  downloadCount: number
+  isExternal?: boolean
+  resolutions?: Record<string, string>
+  source?: string
+  type?: "logo" | "favicon"
+  sector?: string
+  industry?: string
 }
 
-function isDomain(str: string) {
-  return /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/.test(str);
-}
+const isDomain = (str: string) => /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/.test(str)
 
-function getNameFromDomain(domain: string) {
-  const parts = domain.split(".");
-  if (parts.length >= 2) {
-    const name = parts[parts.length - 2];
-    return name.charAt(0).toUpperCase() + name.slice(1);
+const getNameFromDomain = (domain: string) => {
+  try {
+    const parts = domain.split(".")
+    if (parts.length > 2) return parts[parts.length - 2]
+    return parts[0]
+  } catch (e) {
+    return domain
   }
-  return domain;
+}
+
+const formatCurated = (list: { name: string; domain: string }[]): EnrichedCompany[] => {
+  return list.map((c, index) => ({
+    id: \curated-\\,
+    name: c.name,
+    domain: c.domain,
+    logoUrl: \https://logo.clearbit.com/\\, 
+    description: \Official logo of \\,
+    downloadCount: 1000 - index,
+    isExternal: true,
+    source: "Curated",
+    type: "logo"
+  }))
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const query = searchParams.get("q")
+  const query = searchParams.get("query")
+  const category = searchParams.get("category")
 
-  const fallbackResponse: EnrichedCompany[] = [
-    {
-       id: "fallback-google",
-       name: "Google",
-       domain: "google.com",
-       logoUrl: "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com&size=256",
-       downloadCount: 9999,
-       isExternal: true,
-       source: "Fallback",
-       type: "logo"
-    }
-  ];
+  // 1. Curated Category List
+  if (category && CURATED_CATEGORIES[category.toLowerCase()]) {
+    const list = CURATED_CATEGORIES[category.toLowerCase()]
+    return NextResponse.json(formatCurated(list))
+  }
 
-  if (query) {
-    let dbCompanies: EnrichedCompany[] = []
-    let brandfetchCompanies: EnrichedCompany[] = []
-    let appStoreCompanies: EnrichedCompany[] = []
-    let isDbOperational = true
+  // 2. Default Top 100 (if no query)
+  if (!query) {
+    return NextResponse.json(formatCurated(TOP_100_COMPANIES))
+  }
 
-    // 1. Local DB
+  // 3. Search Logic
+  let isDbOperational = true
+  try {
+    await prisma.()
+  } catch (e) {
+    console.warn("DB Connection failed", e)
+    isDbOperational = false
+  }
+
+  // DB Search
+  let dbCompanies: EnrichedCompany[] = []
+  if (isDbOperational) {
     try {
-      const dbResults = await prisma.company.findMany({
+      const results = await prisma.company.findMany({
         where: {
-          OR: [
-            { name: { contains: query } },
-            { domain: { contains: query } }
-          ]
-        }
+            OR: [
+                { name: { contains: query } },
+                { domain: { contains: query } }
+            ]
+        },
+        orderBy: { downloadCount: 'desc' }
       })
-      dbCompanies = dbResults.map(c => ({
-          ...c,
-          source: "DB",
-          type: "logo" 
-      }))
-    } catch (e) {
-      console.warn("DB Search failed:", e)
-      isDbOperational = false
-    }
+      dbCompanies = results.map(c => ({...c, type: 'logo', source: 'DB'} as EnrichedCompany))
+    } catch(e) { console.warn("DB search failed", e) }
+  }
 
-    // 2. Brandfetch API (High Quality Transparent Logos)
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); 
-
-      // Note: In production, you should use an API Key if rate limits are hit
-      const res = await fetch(`https://api.brandfetch.io/v2/search/${encodeURIComponent(query)}`, {
-        signal: controller.signal
+  // External Search (Brandfetch)
+  let brandfetchCompanies: EnrichedCompany[] = []
+  try {
+      const res = await fetch(\https://api.brandfetch.io/v2/search/\\, {
+          headers: { 'Authorization': \Bearer \\ }
       })
-      clearTimeout(timeoutId);
-
       if (res.ok) {
-        const data: BrandfetchCompany[] = await res.json()
-        brandfetchCompanies = data.map(item => ({
-          id: `bf-${item.brandId}`,
-          name: item.name,
-          domain: item.domain,
-          // Brandfetch often provides webp, but let us try to construct a transparent PNG url if possible or use provided icon
-          // Their icon URL is usually reliable.
-          logoUrl: item.icon,
-          description: `Official logo of ${item.name}`,
-          downloadCount: 0,
-          isExternal: true,
-          source: "Brandfetch", // Better than Clearbit for visual quality
-          type: "logo",
-          resolutions: {
-              "Original": item.icon,
-              "Transparent": `https://cdn.brandfetch.io/${item.domain}/w/400/h/400/theme/dark/logo` // Speculative transparent URL
-          }
-        }))
+          const data = await res.json()
+          brandfetchCompanies = data.map((item: any) => ({
+              id: item.brandId,
+              name: item.name,
+              domain: item.domain,
+              logoUrl: item.icon || \https://logo.clearbit.com/\\,
+              description: item.description || \Logo of \\,
+              downloadCount: 0,
+              isExternal: true,
+              source: "Brandfetch",
+              type: "logo"
+          }))
       }
-    } catch (error) {
-      console.error("Brandfetch API failed:", error)
-    }
+  } catch (e) {
+      console.warn("Brandfetch search failed", e)
+  }
 
-    // 3. App Store API
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); 
-
-      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=software&limit=5`, {
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json()
-        if (data.results) {
-            appStoreCompanies = data.results.map((item: any) => ({
-                id: `app-${item.trackId}`,
-                name: item.trackName,
-                domain: item.sellerUrl || "App Store",
-                logoUrl: item.artworkUrl512 || item.artworkUrl100,
-                description: `App Store: ${item.description ? item.description.substring(0, 100) + "..." : item.trackName}`,
-                downloadCount: 0,
-                isExternal: true,
-                source: "AppStore",
-                type: "logo",
-                resolutions: {
-                    "60x60": item.artworkUrl60,
-                    "100x100": item.artworkUrl100,
-                    "512x512": item.artworkUrl512
-                }
-            }))
-        }
-      }
-    } catch (error) {
-        console.error("App Store API failed:", error)
-    }
-
-    // 4. Domain Fallback (Google Favicon) - Explicitly mark as favicon
-    let googleFavicons: EnrichedCompany[] = [];
-    if (isDomain(query)) {
-      const name = getNameFromDomain(query);
-      googleFavicons.push({
-        id: `auto-${query}`,
-        name: name,
-        domain: query,
-        logoUrl: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${query}&size=256`,
-        description: `Official logo of ${name}`,
+  // App Store Search
+  let appStoreCompanies: EnrichedCompany[] = []
+  try {
+    const res = await fetch(\https://itunes.apple.com/search?term=\&entity=software&limit=5\)
+    if (res.ok) {
+      const data = await res.json()
+      appStoreCompanies = data.results.map((item: any) => ({
+        id: \ppstore-\\,
+        name: item.trackName,
+        domain: "App Store",
+        logoUrl: item.artworkUrl512 || item.artworkUrl100,
+        description: item.description?.substring(0, 100) + "...",
         downloadCount: 0,
         isExternal: true,
-        source: "Google",
-        type: "favicon"
-      })
+        source: "AppStore",
+        type: "logo"
+      }))
     }
+  } catch (e) { console.warn("App Store search failed", e) }
 
-    // 5. Merge Results
-    // Priority: DB -> Brandfetch (High Quality) -> AppStore -> Google Favicon
-    const combinedResults = [...dbCompanies, ...brandfetchCompanies, ...appStoreCompanies, ...googleFavicons];
-    
-    // Deduplicate
-    const uniqueMap = new Map();
-    combinedResults.forEach(item => {
-        const key = (item.domain && item.domain !== "App Store") ? item.domain : item.id;
-        
-        if (!uniqueMap.has(key)) {
-            uniqueMap.set(key, item);
-        } else {
-            const existing = uniqueMap.get(key);
-            // Replace favicon with logo
-            if (existing.type === "favicon" && item.type === "logo") {
-                uniqueMap.set(key, item);
-            }
-            // Replace generic logo with Brandfetch if available
-            if (existing.source !== "Brandfetch" && item.source === "Brandfetch") {
-                uniqueMap.set(key, item);
-            }
-        }
-    });
-
-    const finalResults = Array.from(uniqueMap.values());
-
-    // 6. Log Search
-    if (isDbOperational) {
-      prisma.searchLog.create({
-        data: { query, success: finalResults.length > 0 }
-      }).catch(e => console.warn("Failed to log search", e))
-
-      if (dbCompanies.length > 0) {
-        prisma.company.updateMany({
-          where: { id: { in: dbCompanies.map(c => c.id as number) } },
-          data: { searchCount: { increment: 1 } }
-        }).catch(e => console.warn("Failed to update counts", e))
-      }
-    }
-
-    return NextResponse.json(finalResults)
-  }
-
-  // Default List
-  try {
-    const companies = await prisma.company.findMany({
-      orderBy: { downloadCount: "desc" },
-      take: 20
+  // Google Favicon Fallback
+  let googleFavicons: EnrichedCompany[] = [];
+  if (isDomain(query)) {
+    const name = getNameFromDomain(query);
+    googleFavicons.push({
+      id: \uto-\\,
+      name: name,
+      domain: query,
+      logoUrl: \https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://\&size=256\,
+      description: \Official logo of \\,
+      downloadCount: 0,
+      isExternal: true,
+      source: "Google",
+      type: "favicon"
     })
-    return NextResponse.json(companies.map(c => ({...c, type: "logo", source: "DB"})))
-  } catch (e) {
-    return NextResponse.json(fallbackResponse)
   }
+
+  // Merge Results
+  const combinedResults = [...dbCompanies, ...brandfetchCompanies, ...appStoreCompanies, ...googleFavicons];
+  const uniqueMap = new Map();
+  combinedResults.forEach(item => {
+      const key = (item.domain && item.domain !== "App Store") ? item.domain : item.id;
+      if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, item);
+      } else {
+          const existing = uniqueMap.get(key);
+          if (existing.type === "favicon" && item.type === "logo") uniqueMap.set(key, item);
+          if (existing.source !== "Brandfetch" && item.source === "Brandfetch") uniqueMap.set(key, item);
+      }
+  });
+
+  const finalResults = Array.from(uniqueMap.values());
+
+  // Log Search
+  if (isDbOperational) {
+    prisma.searchLog.create({
+      data: { query, success: finalResults.length > 0 }
+    }).catch(e => console.warn("Failed to log search", e))
+
+    if (dbCompanies.length > 0) {
+      prisma.company.updateMany({
+        where: { id: { in: dbCompanies.map(c => c.id as number) } },
+        data: { searchCount: { increment: 1 } }
+      }).catch(e => console.warn("Failed to update counts", e))
+    }
+  }
+
+  return NextResponse.json(finalResults)
 }
 
 export async function POST(request: Request) {
@@ -228,7 +188,7 @@ export async function POST(request: Request) {
     const { name, domain, logoUrl } = body
 
     if (!name || !domain) {
-        return NextResponse.json({ error: "Missing fields" }, { status: 400 })
+        return NextResponse.json({ error: "Missing fields" }, { status: 400 }) 
     }
 
     try {
@@ -242,7 +202,7 @@ export async function POST(request: Request) {
             name,
             domain,
             logoUrl: logoUrl || "",
-            description: `Official logo of ${name}`,
+            description: \Official logo of \\,
             sector: "Auto-discovered",
             industry: "Internet",
             searchCount: 1
@@ -251,12 +211,12 @@ export async function POST(request: Request) {
         return NextResponse.json(newCompany)
     } catch (dbError) {
         console.error("DB Save failed:", dbError)
-        return NextResponse.json({ 
-            id: `temp-${Date.now()}`, 
-            name, 
-            domain, 
-            logoUrl, 
-            isExternal: true 
+        return NextResponse.json({
+            id: \	emp-\\,
+            name,
+            domain,
+            logoUrl,
+            isExternal: true
         })
     }
   } catch (error) {

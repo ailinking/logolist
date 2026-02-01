@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { FaSearch, FaLeaf, FaCompass } from 'react-icons/fa'
 
 interface HeaderProps {
-  onSearch: (query: string) => void;
+  onSearch: (query: string, category?: string) => void;
   isLoading: boolean;
 }
 
@@ -25,8 +25,8 @@ export default function Header({ onSearch, isLoading }: HeaderProps) {
   }
 
   const handleCategoryClick = (category: string) => {
-      setQuery(category)
-      onSearch(category)
+      setQuery('')
+      onSearch('', category)
   }
 
   return (
@@ -43,11 +43,11 @@ export default function Header({ onSearch, isLoading }: HeaderProps) {
         {/* Search Bar */}
         <form onSubmit={handleSubmit} className="flex-1 max-w-2xl mx-4 md:mx-8">
             <div className="relative group">
-                <input 
-                type="text" 
+                <input
+                type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search 10M+ brands, apps, and domains..." 
+                placeholder="Search 10M+ brands, apps, and domains..."
                 className="w-full pl-11 pr-4 py-2.5 bg-gray-100 border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm text-black placeholder-gray-400 group-hover:bg-white group-hover:border-gray-200"
                 />
                 <FaSearch className="absolute left-4 top-3 text-gray-400 group-hover:text-blue-500 transition-colors" size={14} />
@@ -74,7 +74,7 @@ export default function Header({ onSearch, isLoading }: HeaderProps) {
         <span className="text-xs font-semibold text-gray-400 mr-4 uppercase tracking-wider shrink-0">Trending:</span>
         <div className="flex gap-2">
             {POPULAR_CATEGORIES.map(cat => (
-                <button 
+                <button
                     key={cat.name}
                     onClick={() => handleCategoryClick(cat.query)}
                     className="px-3 py-1 text-xs font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors whitespace-nowrap"
