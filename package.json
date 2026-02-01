@@ -6,36 +6,55 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint",
     "postinstall": "prisma generate"
   },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"commonjs\"} prisma/seed.ts"
+  },
   "dependencies": {
-    "bcryptjs": "^3.0.3",
+    "@prisma/client": "^6.3.1",
+    "bcryptjs": "^3.0.0",
     "clsx": "^2.1.1",
-    "dotenv": "^17.2.3",
-    "lucide-react": "^0.563.0",
-    "next": "16.1.6",
-    "next-auth": "^4.24.13",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-hook-form": "^7.71.1",
-    "react-hot-toast": "^2.6.0",
-    "react-icons": "^5.5.0",
-    "tailwind-merge": "^3.4.0",
-    "zod": "^4.3.6"
+    "lucide-react": "^0.474.0",
+    "next": "15.1.6",
+    "next-auth": "^4.24.11",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
+    "react-hot-toast": "^2.5.1",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@prisma/client": "^5.22.0",
-    "@tailwindcss/postcss": "^4",
+    "@eslint/eslintrc": "^3",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
-    "prisma": "^5.22.0",
-    "tailwindcss": "^4",
-    "tsx": "^4.21.0",
+    "eslint-config-next": "15.1.6",
+    "postcss": "^8",
+    "prisma": "^6.3.1",
+    "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
-  }
+  },
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ailinking/logolist.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ailinking/logolist/issues"
+  },
+  "homepage": "https://github.com/ailinking/logolist#readme"
 }

@@ -1,63 +1,156 @@
+﻿import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "../../../auth/[...nextauth]/route"
-import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
+import { z } from "zod"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
 const prisma = new PrismaClient()
 
+// Schema for validation
+const companySchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  domain: z.string().min(1, "Domain is required"),
+  logoUrl: z.string().url("Invalid logo URL").optional().or(z.literal("")),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  affiliateUrl: z.string().url("Invalid affiliate URL").optional().or(z.literal("")),
+})
+
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  // params needs to be awaited in newer Next.js versions if using app router, but currently it's passed as object
-  // Next.js 15+ changes this, but 14 is likely what we have. 
-  // Let's assume standard behavior for now. If error, we fix.
-  // Actually params is a promise in recent versions.
-  // Let's use `const { id } = params` and if it fails, we adapt.
-  // Wait, Next 15 is recent. `package.json` said "next": "16.1.6".
-  // Oh, Next 16? That's very new.
-  // In Next 15/16, params is a Promise.
-  
-  const { id: idStr } = await params
-  const id = parseInt(idStr)
-  
-  const body = await request.json()
-  const { affiliateUrl } = body
-
-  const originalCompany = await prisma.company.findUnique({ where: { id } })
-
-  if (!originalCompany) {
-    return NextResponse.json({ error: "Company not found" }, { status: 404 })
-  }
-
-  const updatedCompany = await prisma.company.update({
-    where: { id },
-    data: { affiliateUrl },
-  })
-
-  // Log change
+  const params = await props.params;
   try {
-    await prisma.changeLog.create({
-      data: {
-        entityType: "Company",
-        entityId: id,
-        action: "UPDATE",
-        changes: JSON.stringify({
-          field: "affiliateUrl",
-          old: originalCompany.affiliateUrl,
-          new: affiliateUrl,
-        }),
-        adminUserId: parseInt((session.user as any).id),
+    const session = await getServerSession(authOptions)
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    const id = parseInt(params.id)
+    if (isNaN(id)) {
+      return NextResponse.json(
+        { error: "Invalid ID" },
+        { status: 400 }
+      )
+    }
+
+    const body = await request.json()
+    const result = companySchema.safeParse(body)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: result.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const { name, domain, logoUrl, description, category, affiliateUrl } = result.data
+
+    // Check if domain exists for other companies
+    const existing = await prisma.company.findFirst({
+      where: {
+        domain,
+        NOT: {
+          id,
+        },
       },
     })
-  } catch (e) {
-    console.error("Failed to log change", e)
-  }
 
-  return NextResponse.json(updatedCompany)
+    if (existing) {
+      return NextResponse.json(
+        { error: "Domain already exists" },
+        { status: 409 }
+      )
+    }
+
+    // Update company
+    const company = await prisma.company.update({
+      where: { id },
+      data: {
+        name,
+        domain,
+        logoUrl: logoUrl || null,
+        description: description || null,
+        category: category || null,
+        affiliateUrl: affiliateUrl || null,
+      },
+    })
+
+    // Log change
+    if (session.user?.email) {
+      await prisma.changeLog.create({
+        data: {
+          action: "UPDATE",
+          entityId: id.toString(),
+          entityType: "Company",
+          details: `Updated company ${name}`,
+          adminEmail: session.user.email,
+        },
+      })
+    }
+
+    return NextResponse.json(company)
+  } catch (error) {
+    console.error("Error updating company:", error)
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  props: { params: Promise<{ id: string }> }
+) {
+  const params = await props.params;
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    const id = parseInt(params.id)
+    if (isNaN(id)) {
+      return NextResponse.json(
+        { error: "Invalid ID" },
+        { status: 400 }
+      )
+    }
+
+    // Delete company
+    await prisma.company.delete({
+      where: { id },
+    })
+
+    // Log change
+    if (session.user?.email) {
+      await prisma.changeLog.create({
+        data: {
+          action: "DELETE",
+          entityId: id.toString(),
+          entityType: "Company",
+          details: `Deleted company with ID ${id}`,
+          adminEmail: session.user.email,
+        },
+      })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting company:", error)
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
+  }
 }

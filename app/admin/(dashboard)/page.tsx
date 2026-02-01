@@ -74,11 +74,11 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ affiliateUrl: editValue }),
       })
-      
+
       if (!res.ok) throw new Error("Failed to update")
-      
+
       toast.success("Affiliate URL updated")
-      setCompanies(companies.map(c => 
+      setCompanies(companies.map(c =>
         c.id === id ? { ...c, affiliateUrl: editValue } : c
       ))
       setEditingId(null)
@@ -103,7 +103,7 @@ export default function AdminDashboard() {
           </p>
         </div>
       </div>
-      
+
       <div className="mt-6 flex gap-4">
         <div className="relative flex-1 max-w-sm">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
