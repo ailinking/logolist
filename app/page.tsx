@@ -1,8 +1,8 @@
-'use client'
-import { useState, useEffect } from 'react'
-import CompanyCard from './components/CompanyCard'
-import KPIDashboard from './components/KPIDashboard'
-import Header from './components/Header'
+"use client"
+import { useState, useEffect } from "react"
+import CompanyCard from "./components/CompanyCard"
+import KPIDashboard from "./components/KPIDashboard"
+import Header from "./components/Header"
 
 interface EnrichedCompany {
     id: number | string;
@@ -11,11 +11,11 @@ interface EnrichedCompany {
     logoUrl: string;
     downloadCount: number;
     isExternal?: boolean;
-    type?: 'logo' | 'favicon';
+    type?: "logo" | "favicon";
 }
 
 export default function Home() {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState("")
   const [companies, setCompanies] = useState<EnrichedCompany[]>([])
   const [loading, setLoading] = useState(false)
   const [currentCategory, setCurrentCategory] = useState<string | null>(null)
@@ -26,29 +26,29 @@ export default function Home() {
     setCurrentCategory(category || null)
 
     try {
-      let url = \/api/companies\
+      let url = /api/companies
       if (category) {
-        url += \?category=\\
+        url += ?category=
       } else if (q) {
-        url += \?query=\\
+        url += ?query=
       }
       
       const res = await fetch(url)
       const data = await res.json()
       setCompanies(data)
     } catch (error) {
-      console.error('Search failed', error)
+      console.error("Search failed", error)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    search('')
+    search("")
   }, [])
 
-  const logos = companies.filter(c => c.type !== 'favicon')
-  const favicons = companies.filter(c => c.type === 'favicon')
+  const logos = companies.filter(c => c.type !== "favicon")
+  const favicons = companies.filter(c => c.type === "favicon")
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
@@ -74,7 +74,7 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-6">       
                     <h2 className="text-xl font-bold flex items-center gap-2">
                         <span className="bg-black w-1 h-6 rounded-full block"></span>
-                        {currentCategory ? \Top \ Companies\ : (query ? 'Search Results' : 'Global Top 100')}
+                        {currentCategory ? Top  Companies : (query ? "Search Results" : "Global Top 100")}
                     </h2>
                     <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm">
                         {logos.length} results

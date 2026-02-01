@@ -34,11 +34,11 @@ const getNameFromDomain = (domain: string) => {
 
 const formatCurated = (list: { name: string; domain: string }[]): EnrichedCompany[] => {
   return list.map((c, index) => ({
-    id: \curated-\\,
+    id: curated-,
     name: c.name,
     domain: c.domain,
-    logoUrl: \https://logo.clearbit.com/\\, 
-    description: \Official logo of \\,
+    logoUrl: https://logo.clearbit.com/, 
+    description: Official logo of ,
     downloadCount: 1000 - index,
     isExternal: true,
     source: "Curated",
@@ -91,8 +91,8 @@ export async function GET(request: Request) {
   // External Search (Brandfetch)
   let brandfetchCompanies: EnrichedCompany[] = []
   try {
-      const res = await fetch(\https://api.brandfetch.io/v2/search/\\, {
-          headers: { 'Authorization': \Bearer \\ }
+      const res = await fetch(https://api.brandfetch.io/v2/search/, {
+          headers: { 'Authorization': Bearer  }
       })
       if (res.ok) {
           const data = await res.json()
@@ -100,8 +100,8 @@ export async function GET(request: Request) {
               id: item.brandId,
               name: item.name,
               domain: item.domain,
-              logoUrl: item.icon || \https://logo.clearbit.com/\\,
-              description: item.description || \Logo of \\,
+              logoUrl: item.icon || https://logo.clearbit.com/,
+              description: item.description || Logo of ,
               downloadCount: 0,
               isExternal: true,
               source: "Brandfetch",
@@ -115,11 +115,11 @@ export async function GET(request: Request) {
   // App Store Search
   let appStoreCompanies: EnrichedCompany[] = []
   try {
-    const res = await fetch(\https://itunes.apple.com/search?term=\&entity=software&limit=5\)
+    const res = await fetch(https://itunes.apple.com/search?term=&entity=software&limit=5)
     if (res.ok) {
       const data = await res.json()
       appStoreCompanies = data.results.map((item: any) => ({
-        id: \ppstore-\\,
+        id: ppstore-,
         name: item.trackName,
         domain: "App Store",
         logoUrl: item.artworkUrl512 || item.artworkUrl100,
@@ -137,11 +137,11 @@ export async function GET(request: Request) {
   if (isDomain(query)) {
     const name = getNameFromDomain(query);
     googleFavicons.push({
-      id: \uto-\\,
+      id: uto-,
       name: name,
       domain: query,
-      logoUrl: \https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://\&size=256\,
-      description: \Official logo of \\,
+      logoUrl: https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://&size=256,
+      description: Official logo of ,
       downloadCount: 0,
       isExternal: true,
       source: "Google",
@@ -202,7 +202,7 @@ export async function POST(request: Request) {
             name,
             domain,
             logoUrl: logoUrl || "",
-            description: \Official logo of \\,
+            description: Official logo of ,
             sector: "Auto-discovered",
             industry: "Internet",
             searchCount: 1
@@ -212,7 +212,7 @@ export async function POST(request: Request) {
     } catch (dbError) {
         console.error("DB Save failed:", dbError)
         return NextResponse.json({
-            id: \	emp-\\,
+            id: 	emp-,
             name,
             domain,
             logoUrl,
