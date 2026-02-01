@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -9,19 +8,22 @@ datasource db {
 }
 
 model Company {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  domain      String   @unique
-  logoUrl     String
-  description String?
-  sector      String?
-  industry    String?
-  foundedYear Int?
-  employees   String?
-  searchCount    Int @default(0)
-  downloadCount  Int @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  domain        String   @unique
+  logoUrl       String
+  description   String?
+  sector        String?
+  industry      String?
+  foundedYear   Int?
+  employees     String?
+  affiliateUrl  String?
+  searchCount   Int      @default(0)
+  downloadCount Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  changeLogs    ChangeLog[]
 }
 
 model SearchLog {
@@ -29,4 +31,28 @@ model SearchLog {
   query     String
   success   Boolean
   createdAt DateTime @default(now())
+}
+
+model AdminUser {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  role      String   @default("ADMIN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  changeLogs ChangeLog[]
+}
+
+model ChangeLog {
+  id          Int      @id @default(autoincrement())
+  entityType  String
+  entityId    Int
+  action      String
+  changes     String
+  adminUserId Int?
+  createdAt   DateTime @default(now())
+
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id])
+  company     Company?   @relation(fields: [entityId], references: [id])
 }
