@@ -3,10 +3,12 @@ import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
-interface ClearbitCompany {
+interface BrandfetchCompany {
+  brandId: string
   name: string
   domain: string
-  logo: string | null
+  icon: string
+  claimed?: boolean
 }
 
 interface EnrichedCompany {
@@ -19,7 +21,7 @@ interface EnrichedCompany {
     isExternal?: boolean;
     resolutions?: Record<string, string>;
     source?: string;
-    type?: "logo" | "favicon"; // New field for classification
+    type?: "logo" | "favicon";
 }
 
 function isDomain(str: string) {
@@ -54,7 +56,7 @@ export async function GET(request: Request) {
 
   if (query) {
     let dbCompanies: EnrichedCompany[] = []
-    let apiCompanies: EnrichedCompany[] = []
+    let brandfetchCompanies: EnrichedCompany[] = []
     let appStoreCompanies: EnrichedCompany[] = []
     let isDbOperational = true
 
@@ -71,39 +73,46 @@ export async function GET(request: Request) {
       dbCompanies = dbResults.map(c => ({
           ...c,
           source: "DB",
-          type: "logo" // Assume DB content is vetted/good
+          type: "logo" 
       }))
     } catch (e) {
       console.warn("DB Search failed:", e)
       isDbOperational = false
     }
 
-    // 2. Clearbit API
+    // 2. Brandfetch API (High Quality Transparent Logos)
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); 
 
-      const res = await fetch(`https://autocomplete.clearbit.com/v1/companies/suggest?query=${encodeURIComponent(query)}`, {
+      // Note: In production, you should use an API Key if rate limits are hit
+      const res = await fetch(`https://api.brandfetch.io/v2/search/${encodeURIComponent(query)}`, {
         signal: controller.signal
       })
       clearTimeout(timeoutId);
 
       if (res.ok) {
-        const data: ClearbitCompany[] = await res.json()
-        apiCompanies = data.map(item => ({
-          id: `ext-${item.domain}`,
+        const data: BrandfetchCompany[] = await res.json()
+        brandfetchCompanies = data.map(item => ({
+          id: `bf-${item.brandId}`,
           name: item.name,
           domain: item.domain,
-          logoUrl: item.logo || `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${item.domain}&size=256`,
+          // Brandfetch often provides webp, but let us try to construct a transparent PNG url if possible or use provided icon
+          // Their icon URL is usually reliable.
+          logoUrl: item.icon,
           description: `Official logo of ${item.name}`,
           downloadCount: 0,
           isExternal: true,
-          source: "Clearbit",
-          type: "logo"
+          source: "Brandfetch", // Better than Clearbit for visual quality
+          type: "logo",
+          resolutions: {
+              "Original": item.icon,
+              "Transparent": `https://cdn.brandfetch.io/${item.domain}/w/400/h/400/theme/dark/logo` // Speculative transparent URL
+          }
         }))
       }
     } catch (error) {
-      console.error("Clearbit API failed:", error)
+      console.error("Brandfetch API failed:", error)
     }
 
     // 3. App Store API
@@ -142,8 +151,6 @@ export async function GET(request: Request) {
     }
 
     // 4. Domain Fallback (Google Favicon) - Explicitly mark as favicon
-    // ALWAYS add this if query is a domain, not just as fallback. 
-    // User wants to see favicons but classified separately.
     let googleFavicons: EnrichedCompany[] = [];
     if (isDomain(query)) {
       const name = getNameFromDomain(query);
@@ -161,12 +168,10 @@ export async function GET(request: Request) {
     }
 
     // 5. Merge Results
-    const combinedResults = [...dbCompanies, ...appStoreCompanies, ...apiCompanies, ...googleFavicons];
+    // Priority: DB -> Brandfetch (High Quality) -> AppStore -> Google Favicon
+    const combinedResults = [...dbCompanies, ...brandfetchCompanies, ...appStoreCompanies, ...googleFavicons];
     
-    // Deduplicate: 
-    // - If we have a Logo (DB/AppStore/Clearbit) for a domain, we generally prefer it over the Favicon.
-    // - BUT user said "separate classification", so maybe keep both if they are distinct?
-    // - Let is keep simple deduplication but ensure Logos win over Favicons if keys collide.
+    // Deduplicate
     const uniqueMap = new Map();
     combinedResults.forEach(item => {
         const key = (item.domain && item.domain !== "App Store") ? item.domain : item.id;
@@ -174,9 +179,13 @@ export async function GET(request: Request) {
         if (!uniqueMap.has(key)) {
             uniqueMap.set(key, item);
         } else {
-            // If existing is favicon and new is logo, replace it
             const existing = uniqueMap.get(key);
+            // Replace favicon with logo
             if (existing.type === "favicon" && item.type === "logo") {
+                uniqueMap.set(key, item);
+            }
+            // Replace generic logo with Brandfetch if available
+            if (existing.source !== "Brandfetch" && item.source === "Brandfetch") {
                 uniqueMap.set(key, item);
             }
         }
