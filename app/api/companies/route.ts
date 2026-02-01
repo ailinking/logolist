@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 
-// Instantiate PrismaClient outside of the handler
 const prisma = new PrismaClient()
 
-// Define the external API response type
 interface ClearbitCompany {
   name: string
   domain: string
   logo: string | null
 }
 
-// Interface for frontend consumption
 interface EnrichedCompany {
     id: number | string;
     name: string;
@@ -20,16 +17,15 @@ interface EnrichedCompany {
     description?: string | null;
     downloadCount: number;
     isExternal?: boolean;
-    resolutions?: Record<string, string>; // e.g. { "original": "url", "512x512": "url" }
-    source?: string; // "Clearbit", "AppStore", "DB", "Google"
+    resolutions?: Record<string, string>;
+    source?: string;
+    type?: "logo" | "favicon"; // New field for classification
 }
 
-// Helper: Check if string is a domain
 function isDomain(str: string) {
   return /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/.test(str);
 }
 
-// Helper: Extract name from domain
 function getNameFromDomain(domain: string) {
   const parts = domain.split(".");
   if (parts.length >= 2) {
@@ -43,7 +39,6 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get("q")
 
-  // Default Fallback Response
   const fallbackResponse: EnrichedCompany[] = [
     {
        id: "fallback-google",
@@ -52,7 +47,8 @@ export async function GET(request: Request) {
        logoUrl: "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com&size=256",
        downloadCount: 9999,
        isExternal: true,
-       source: "Fallback"
+       source: "Fallback",
+       type: "logo"
     }
   ];
 
@@ -62,7 +58,7 @@ export async function GET(request: Request) {
     let appStoreCompanies: EnrichedCompany[] = []
     let isDbOperational = true
 
-    // 1. Try Local DB Search
+    // 1. Local DB
     try {
       const dbResults = await prisma.company.findMany({
         where: {
@@ -74,14 +70,15 @@ export async function GET(request: Request) {
       })
       dbCompanies = dbResults.map(c => ({
           ...c,
-          source: "DB"
+          source: "DB",
+          type: "logo" // Assume DB content is vetted/good
       }))
     } catch (e) {
       console.warn("DB Search failed:", e)
       isDbOperational = false
     }
 
-    // 2. Call Clearbit API (Global Search)
+    // 2. Clearbit API
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); 
@@ -101,14 +98,15 @@ export async function GET(request: Request) {
           description: `Official logo of ${item.name}`,
           downloadCount: 0,
           isExternal: true,
-          source: "Clearbit"
+          source: "Clearbit",
+          type: "logo"
         }))
       }
     } catch (error) {
       console.error("Clearbit API failed:", error)
     }
 
-    // 3. Call iTunes App Store API (For Mobile Apps)
+    // 3. App Store API
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); 
@@ -124,12 +122,13 @@ export async function GET(request: Request) {
             appStoreCompanies = data.results.map((item: any) => ({
                 id: `app-${item.trackId}`,
                 name: item.trackName,
-                domain: item.sellerUrl || "App Store", // Fallback if no seller URL
+                domain: item.sellerUrl || "App Store",
                 logoUrl: item.artworkUrl512 || item.artworkUrl100,
                 description: `App Store: ${item.description ? item.description.substring(0, 100) + "..." : item.trackName}`,
                 downloadCount: 0,
                 isExternal: true,
                 source: "AppStore",
+                type: "logo",
                 resolutions: {
                     "60x60": item.artworkUrl60,
                     "100x100": item.artworkUrl100,
@@ -142,10 +141,13 @@ export async function GET(request: Request) {
         console.error("App Store API failed:", error)
     }
 
-    // 4. Fallback for Domain Queries
-    if (dbCompanies.length === 0 && apiCompanies.length === 0 && appStoreCompanies.length === 0 && isDomain(query)) {
+    // 4. Domain Fallback (Google Favicon) - Explicitly mark as favicon
+    // ALWAYS add this if query is a domain, not just as fallback. 
+    // User wants to see favicons but classified separately.
+    let googleFavicons: EnrichedCompany[] = [];
+    if (isDomain(query)) {
       const name = getNameFromDomain(query);
-      apiCompanies.push({
+      googleFavicons.push({
         id: `auto-${query}`,
         name: name,
         domain: query,
@@ -153,23 +155,30 @@ export async function GET(request: Request) {
         description: `Official logo of ${name}`,
         downloadCount: 0,
         isExternal: true,
-        source: "Google"
+        source: "Google",
+        type: "favicon"
       })
     }
 
     // 5. Merge Results
-    // We prioritize DB -> App Store -> Clearbit
-    // Use a Map to deduplicate by Name (fuzzy) or Domain
-    const combinedResults = [...dbCompanies, ...appStoreCompanies, ...apiCompanies];
+    const combinedResults = [...dbCompanies, ...appStoreCompanies, ...apiCompanies, ...googleFavicons];
     
-    // Simple deduplication logic: if same domain exists, prefer DB > AppStore > Clearbit
-    // Since we concat in order, we can filter duplicates.
+    // Deduplicate: 
+    // - If we have a Logo (DB/AppStore/Clearbit) for a domain, we generally prefer it over the Favicon.
+    // - BUT user said "separate classification", so maybe keep both if they are distinct?
+    // - Let is keep simple deduplication but ensure Logos win over Favicons if keys collide.
     const uniqueMap = new Map();
     combinedResults.forEach(item => {
-        // Use domain as key if valid, otherwise use ID (for apps without domain)
         const key = (item.domain && item.domain !== "App Store") ? item.domain : item.id;
+        
         if (!uniqueMap.has(key)) {
             uniqueMap.set(key, item);
+        } else {
+            // If existing is favicon and new is logo, replace it
+            const existing = uniqueMap.get(key);
+            if (existing.type === "favicon" && item.type === "logo") {
+                uniqueMap.set(key, item);
+            }
         }
     });
 
@@ -198,7 +207,7 @@ export async function GET(request: Request) {
       orderBy: { downloadCount: "desc" },
       take: 20
     })
-    return NextResponse.json(companies)
+    return NextResponse.json(companies.map(c => ({...c, type: "logo", source: "DB"})))
   } catch (e) {
     return NextResponse.json(fallbackResponse)
   }

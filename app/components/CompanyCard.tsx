@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import Image from 'next/image'
-import { FaDownload, FaImage, FaAppStore, FaGlobe } from 'react-icons/fa'
+import { FaDownload, FaImage, FaAppStore, FaGlobe, FaRulerCombined } from 'react-icons/fa'
 
 interface Company {
   id: number | string
@@ -12,12 +12,14 @@ interface Company {
   isExternal?: boolean
   resolutions?: Record<string, string>
   source?: string
+  type?: 'logo' | 'favicon'
 }
 
 export default function CompanyCard({ company }: { company: Company }) {
   const [imgSrc, setImgSrc] = useState(company.logoUrl)
   const [imgError, setImgError] = useState(false)
   const [selectedResolution, setSelectedResolution] = useState(company.resolutions ? Object.keys(company.resolutions).pop() : 'Original')
+  const [dimensions, setDimensions] = useState<{w: number, h: number} | null>(null)
 
   const getDownloadUrl = () => {
     if (company.resolutions && selectedResolution && company.resolutions[selectedResolution]) {
@@ -38,7 +40,6 @@ export default function CompanyCard({ company }: { company: Company }) {
            body: JSON.stringify(company)
          })
          const saved = await res.json()
-         // Use the new real ID for download tracking if saved successfully
          const downloadId = saved.id || company.id
          await fetch(`/api/companies/${downloadId}/download`, { method: 'POST' })
        } catch (e) {
@@ -48,11 +49,8 @@ export default function CompanyCard({ company }: { company: Company }) {
        await fetch(`/api/companies/${company.id}/download`, { method: 'POST' })
     }
     
-    // Use Proxy for direct download
-    // Encode the target URL
     const proxyUrl = `/api/download-proxy?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(company.name + '-logo.png')}`
     
-    // Trigger download via hidden iframe or link click
     const link = document.createElement('a')
     link.href = proxyUrl
     link.download = `${company.name}-logo.png`
@@ -63,25 +61,29 @@ export default function CompanyCard({ company }: { company: Company }) {
 
   const getSourceIcon = () => {
       if (company.source === 'AppStore') return <FaAppStore className="text-blue-500" />
-      if (company.source === 'Clearbit' || company.source === 'Google') return <FaGlobe className="text-gray-500" />
+      if (company.source === 'Clearbit' || company.source === 'Google') return <FaGlobe className="text-gray-400" />
       return null
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 flex flex-col items-center hover:shadow-lg transition relative overflow-hidden">
+    <div className="group bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center hover:border-blue-500 hover:shadow-lg transition-all duration-200 relative overflow-hidden">
       {company.isExternal && (
-         <div className="absolute top-0 right-0 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-bl flex items-center gap-1">
+         <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-2 py-1 rounded-md text-[10px] font-medium text-gray-500">
            {getSourceIcon()} {company.source || 'Global'}
          </div>
       )}
-      <div className="w-32 h-32 relative mb-4 flex items-center justify-center bg-gray-50 rounded-lg">
+      
+      <div className="w-full aspect-square relative mb-4 flex items-center justify-center bg-gray-50/50 rounded-lg border border-gray-100 group-hover:bg-white transition-colors">
         {!imgError ? (
           <Image 
             src={imgSrc} 
             alt={`${company.name} logo`} 
             fill
-            className="object-contain p-2"
+            className="object-contain p-4"
             unoptimized 
+            onLoadingComplete={(img) => {
+                setDimensions({ w: img.naturalWidth, h: img.naturalHeight })
+            }}
             onError={() => {
               if (imgSrc.includes('clearbit')) {
                 setImgSrc(`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${company.domain}&size=256`)
@@ -92,37 +94,47 @@ export default function CompanyCard({ company }: { company: Company }) {
           />
         ) : (
           <div className="text-gray-300 flex flex-col items-center justify-center h-full w-full">
-            <FaImage size={32} />
-            <span className="text-xs mt-1">No Logo</span>
+            <FaImage size={24} />
+            <span className="text-xs mt-2 font-medium">No Preview</span>
           </div>
         )}
       </div>
-      <h3 className="text-lg font-bold mb-1 text-black text-center truncate w-full">{company.name}</h3>
-      <p className="text-sm text-gray-500 mb-4 truncate w-full text-center">{company.domain}</p>
+
+      <div className="w-full text-center mb-3">
+        <h3 className="text-base font-bold text-gray-900 truncate">{company.name}</h3>
+        <p className="text-xs text-gray-500 truncate mt-0.5">{company.domain}</p>
+      </div>
       
-      {company.resolutions && (
-          <div className="w-full mb-2">
+      <div className="w-full space-y-2 mt-auto">
+        {/* Dimensions Badge */}
+        <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400 bg-gray-50 py-1 rounded">
+            <FaRulerCombined size={10} />
+            {dimensions ? `${dimensions.w} x ${dimensions.h}px` : 'Checking size...'}
+        </div>
+
+        {company.resolutions && (
             <select 
                 value={selectedResolution}
                 onChange={(e) => setSelectedResolution(e.target.value)}
-                className="w-full text-xs p-1 border rounded bg-gray-50 text-black"
+                className="w-full text-xs py-1.5 px-2 border border-gray-200 rounded bg-white text-gray-700 focus:outline-none focus:border-blue-500"
             >
                 {Object.keys(company.resolutions).map(res => (
                     <option key={res} value={res}>{res}</option>
                 ))}
             </select>
-          </div>
-      )}
+        )}
 
-      <button 
-        onClick={handleDownload}
-        disabled={imgError}
-        className={`flex items-center gap-2 text-white px-4 py-2 rounded w-full justify-center cursor-pointer ${imgError ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-      >
-        <FaDownload /> Download
-      </button>
-      <div className="text-xs text-gray-400 mt-2">
-        {company.downloadCount} downloads
+        <button 
+            onClick={handleDownload}
+            disabled={imgError}
+            className={`flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold transition-colors ${
+                imgError 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                : 'bg-black text-white hover:bg-gray-800'
+            }`}
+        >
+            <FaDownload size={10} /> Download PNG
+        </button>
       </div>
     </div>
   )

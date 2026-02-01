@@ -2,11 +2,21 @@
 import { useState, useEffect } from 'react'
 import CompanyCard from './components/CompanyCard'
 import KPIDashboard from './components/KPIDashboard'
-import { FaSearch, FaGlobe } from 'react-icons/fa'
+import Header from './components/Header'
+
+interface EnrichedCompany {
+    id: number | string;
+    name: string;
+    domain: string;
+    logoUrl: string;
+    downloadCount: number;
+    isExternal?: boolean;
+    type?: 'logo' | 'favicon';
+}
 
 export default function Home() {
   const [query, setQuery] = useState('')
-  const [companies, setCompanies] = useState([])
+  const [companies, setCompanies] = useState<EnrichedCompany[]>([])
   const [loading, setLoading] = useState(false)
 
   const search = async (q: string) => {
@@ -26,61 +36,82 @@ export default function Home() {
     search('') // Initial load
   }, [])
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    search(query)
-  }
+  const logos = companies.filter(c => c.type !== 'favicon')
+  const favicons = companies.filter(c => c.type === 'favicon')
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-8 text-center">
-          <h1 className="text-4xl font-extrabold text-gray-900 mb-2">LogoList</h1>
-          <p className="text-gray-600">The centralized database for high-quality company logos.</p>
-        </header>
-
-        <KPIDashboard />
-
-        <div className="mb-8">
-          <form onSubmit={handleSearch} className="flex gap-2 max-w-2xl mx-auto">
-            <input 
-              type="text" 
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search for any company (e.g. OpenAI, Notion, Vercel)..." 
-              className="flex-1 p-4 rounded-lg border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none text-black"
-            />
-            <button 
-              type="submit" 
-              className="bg-black text-white px-8 py-4 rounded-lg font-bold hover:bg-gray-800 flex items-center gap-2 cursor-pointer"
-            >
-              <FaSearch /> Search
-            </button>
-          </form>
-          <div className="text-center mt-2 text-sm text-gray-500">
-            <span className="flex items-center justify-center gap-1">
-              <FaGlobe className="text-gray-400" />
-              Now searching global company database via API.
-            </span>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+      <Header onSearch={search} isLoading={loading} />
+      
+      <main className="flex-1 pt-24 px-4 md:px-8 pb-12 max-w-7xl mx-auto w-full">
+        {/* KPI Dashboard */}
+        {!query && (
+            <div className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <KPIDashboard />
+            </div>
+        )}
 
         {loading ? (
-          <div className="text-center py-12 text-black">Searching global database...</div>
+          <div className="text-center py-20">
+             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-500"></div>
+             <p className="mt-4 text-gray-500 font-medium">Searching global database...</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {companies.map((company: any) => (
-              <CompanyCard key={company.id} company={company} />
-            ))}
+          <div className="space-y-12">
+            {/* Logos Section */}
+            <section>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <span className="bg-black w-1 h-6 rounded-full block"></span>
+                        Brands & Apps
+                    </h2>
+                    <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm">
+                        {logos.length} results
+                    </span>
+                </div>
+                
+                {logos.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        {logos.map((company: any) => (
+                        <CompanyCard key={company.id} company={company} />
+                        ))}
+                    </div>
+                ) : (
+                    !loading && query && <div className="text-gray-400 italic py-8 text-center bg-white rounded-xl border border-dashed border-gray-200">No brand logos found matching "{query}"</div>
+                )}
+            </section>
+
+            {/* Favicons Section (Lower Priority) */}
+            {favicons.length > 0 && (
+                <section className="pt-8 border-t border-gray-200">
+                    <div className="flex items-center gap-3 mb-6 opacity-70">
+                        <h2 className="text-lg font-semibold text-gray-600">Web Icons (Favicons)</h2>
+                        <div className="h-px bg-gray-300 flex-1"></div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 opacity-90 hover:opacity-100 transition-opacity">
+                        {favicons.map((company: any) => (
+                        <CompanyCard key={company.id} company={company} />
+                        ))}
+                    </div>
+                </section>
+            )}
+            
+            {!loading && companies.length === 0 && (
+              <div className="text-center py-20">
+                <div className="text-6xl mb-4"></div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No results found</h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                    We couldn't find any companies matching "{query}". Try searching for a domain (e.g. example.com) to automatically discover it.
+                </p>
+              </div>
+            )}
           </div>
         )}
-        
-        {!loading && companies.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            No companies found. Try a different name.
-          </div>
-        )}
-      </div>
-    </main>
+      </main>
+      
+      <footer className="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-400">
+        <p>&copy; {new Date().getFullYear()} LogoList. All rights reserved.</p>
+      </footer>
+    </div>
   )
 }
