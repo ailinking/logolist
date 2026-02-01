@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
-import { CURATED_CATEGORIES, TOP_100_COMPANIES } from "../../lib/curatedData"
+import { CURATED_CATEGORIES, TOP_100_COMPANIES } from "@/lib/curatedData"
 
 const prisma = new PrismaClient()
 const BRANDFETCH_API_KEY = process.env.BRANDFETCH_API_KEY || "YOUR_KEY"
@@ -34,11 +34,11 @@ const getNameFromDomain = (domain: string) => {
 
 const formatCurated = (list: { name: string; domain: string }[]): EnrichedCompany[] => {
   return list.map((c, index) => ({
-    id: \curated-\\,
+    id: `curated-${c.domain}`,
     name: c.name,
     domain: c.domain,
-    logoUrl: \https://logo.clearbit.com/\\, 
-    description: \Official logo of \\,
+    logoUrl: `https://logo.clearbit.com/${c.domain}`, 
+    description: `Official logo of ${c.name}`,
     downloadCount: 1000 - index,
     isExternal: true,
     source: "Curated",
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
   // 3. Search Logic
   let isDbOperational = true
   try {
-    await prisma.\$connect\()
+    await prisma.$connect()
   } catch (e) {
     console.warn("DB Connection failed", e)
     isDbOperational = false
@@ -91,8 +91,8 @@ export async function GET(request: Request) {
   // External Search (Brandfetch)
   let brandfetchCompanies: EnrichedCompany[] = []
   try {
-      const res = await fetch(\https://api.brandfetch.io/v2/search/\\, {
-          headers: { 'Authorization': \Bearer \\ }
+      const res = await fetch(`https://api.brandfetch.io/v2/search/${query}`, {
+          headers: { 'Authorization': `Bearer ${BRANDFETCH_API_KEY}` }
       })
       if (res.ok) {
           const data = await res.json()
@@ -100,8 +100,8 @@ export async function GET(request: Request) {
               id: item.brandId,
               name: item.name,
               domain: item.domain,
-              logoUrl: item.icon || \https://logo.clearbit.com/\\,
-              description: item.description || \Logo of \\,
+              logoUrl: item.icon || `https://logo.clearbit.com/${item.domain}`,
+              description: item.description || `Logo of ${item.name}`,
               downloadCount: 0,
               isExternal: true,
               source: "Brandfetch",
@@ -115,11 +115,11 @@ export async function GET(request: Request) {
   // App Store Search
   let appStoreCompanies: EnrichedCompany[] = []
   try {
-    const res = await fetch(\https://itunes.apple.com/search?term=\&entity=software&limit=5\)
+    const res = await fetch(`https://itunes.apple.com/search?term=${query}&entity=software&limit=5`)
     if (res.ok) {
       const data = await res.json()
       appStoreCompanies = data.results.map((item: any) => ({
-        id: \ppstore-\\,
+        id: `appstore-${item.trackId}`,
         name: item.trackName,
         domain: "App Store",
         logoUrl: item.artworkUrl512 || item.artworkUrl100,
@@ -137,11 +137,11 @@ export async function GET(request: Request) {
   if (isDomain(query)) {
     const name = getNameFromDomain(query);
     googleFavicons.push({
-      id: \uto-\\,
+      id: `auto-${query}`,
       name: name,
       domain: query,
-      logoUrl: \https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://\&size=256\,
-      description: \Official logo of \\,
+      logoUrl: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${query}&size=256`,
+      description: `Official logo of ${name}`,
       downloadCount: 0,
       isExternal: true,
       source: "Google",
@@ -202,7 +202,7 @@ export async function POST(request: Request) {
             name,
             domain,
             logoUrl: logoUrl || "",
-            description: \Official logo of \\,
+            description: `Official logo of ${name}`,
             sector: "Auto-discovered",
             industry: "Internet",
             searchCount: 1
@@ -212,7 +212,7 @@ export async function POST(request: Request) {
     } catch (dbError) {
         console.error("DB Save failed:", dbError)
         return NextResponse.json({
-            id: \	emp-\\,
+            id: `temp-${Date.now()}`,
             name,
             domain,
             logoUrl,

@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": contentType,
-        "Content-Disposition": \ttachment; filename="\"\,
+        "Content-Disposition": `attachment; filename="${filename}"`,
       },
     })
   } catch (error) {
