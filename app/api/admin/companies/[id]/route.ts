@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from @/lib/auth
 
 // Schema for validation
 const companySchema = z.object({
