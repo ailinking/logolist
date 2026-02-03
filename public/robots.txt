@@ -1,0 +1,13 @@
+# LogoList Sitemap and Robots
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://logolist.vercel.app/sitemap.xml
+
+# Crawl delay (optional, respectful to server)
+Crawl-delay: 1

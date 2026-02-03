@@ -1,0 +1,16 @@
+{
+    "name": "LogoList",
+    "short_name": "LogoList",
+    "description": "Download free company logos in PNG, SVG & vector formats",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#2563eb",
+    "icons": [
+        {
+            "src": "/favicon.ico",
+            "sizes": "any",
+            "type": "image/x-icon"
+        }
+    ]
+}
