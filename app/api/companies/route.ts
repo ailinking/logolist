@@ -142,7 +142,7 @@ export async function GET(request: Request) {
         id: `appstore-${item.trackId}`,
         name: item.trackName,
         domain: "App Store",
-        logoUrl: item.artworkUrl512 || item.artworkUrl100,
+        logoUrl: item.artworkUrl512 || item.artworkUrl100 || "",
         description: item.description?.substring(0, 100) + "...",
         downloadCount: 0,
         isExternal: true,
