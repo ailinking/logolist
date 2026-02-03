@@ -1,11 +1,32 @@
 @import "tailwindcss";
 
 :root {
+  /* Light theme colors - WCAG AA compliant */
   --background: #ffffff;
   --foreground: #171717;
-  /* WCAG AA compliant colors */
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --muted: #6b7280;
+  --muted-foreground: #4b5563;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --success: #059669;
   --focus-ring: #2563eb;
   --focus-ring-offset: 2px;
+}
+
+.dark {
+  /* Dark theme colors - WCAG AA compliant (4.5:1 contrast ratio) */
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card-bg: #171717;
+  --card-border: #262626;
+  --muted: #a3a3a3;
+  --muted-foreground: #d4d4d4;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --success: #10b981;
+  --focus-ring: #3b82f6;
 }
 
 @theme inline {
@@ -15,17 +36,59 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Dark mode utility classes */
+.dark body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Card styles for dark mode */
+.dark .bg-white {
+  background-color: var(--card-bg) !important;
+}
+
+.dark .border-gray-200,
+.dark .border-gray-100 {
+  border-color: var(--card-border) !important;
+}
+
+.dark .text-gray-900 {
+  color: var(--foreground) !important;
+}
+
+.dark .text-gray-600,
+.dark .text-gray-500 {
+  color: var(--muted) !important;
+}
+
+.dark .text-gray-400 {
+  color: #737373 !important;
+}
+
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+  background-color: #262626 !important;
+}
+
+.dark .hover\:bg-gray-200:hover {
+  background-color: #333333 !important;
+}
+
+.dark .placeholder-gray-500::placeholder {
+  color: #737373 !important;
+}
+
+/* Header dark mode */
+.dark header {
+  background: rgba(10, 10, 10, 0.95) !important;
+  border-color: var(--card-border) !important;
 }
 
 /* WCAG Focus Styles - visible focus indicators for keyboard navigation */
@@ -43,6 +106,14 @@ textarea:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+
+.dark button:focus-visible,
+.dark a:focus-visible,
+.dark input:focus-visible,
+.dark select:focus-visible,
+.dark textarea:focus-visible {
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
 }
 
 /* Skip Link - hidden until focused for keyboard users */
@@ -65,6 +136,10 @@ textarea:focus-visible {
   top: 1rem;
 }
 
+.dark .skip-link {
+  background: #374151;
+}
+
 /* Screen reader only - visually hidden but accessible */
 .sr-only {
   position: absolute;
@@ -80,6 +155,7 @@ textarea:focus-visible {
 
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -96,4 +172,17 @@ textarea:focus-visible {
     outline: 3px solid currentColor;
     outline-offset: 2px;
   }
+
+  .dark {
+    --foreground: #ffffff;
+    --muted: #d4d4d4;
+  }
+}
+
+/* Smooth theme transition */
+html.transitioning,
+html.transitioning *,
+html.transitioning *::before,
+html.transitioning *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
 }

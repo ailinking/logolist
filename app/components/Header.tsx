@@ -1,6 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import { FaSearch, FaLeaf, FaCompass } from 'react-icons/fa'
+import ThemeToggle from './ThemeToggle'
 
 interface HeaderProps {
   onSearch: (query: string, category?: string) => void;
@@ -99,20 +100,22 @@ export default function Header({ onSearch, isLoading }: HeaderProps) {
         </form>
 
         {/* Right Actions */}
-        <nav className="hidden md:flex items-center gap-6" aria-label="Quick actions">
+        <nav className="hidden md:flex items-center gap-4" aria-label="Quick actions">
           <button
-            className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-black transition"
+            className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition"
             aria-haspopup="true"
           >
             <FaCompass className="text-gray-400" aria-hidden="true" /> Categories
           </button>
-          <div className="h-4 w-px bg-gray-200" role="separator" aria-hidden="true"></div>
+          <div className="h-4 w-px bg-gray-200 dark:bg-gray-700" role="separator" aria-hidden="true"></div>
           <a
             href="#"
-            className="text-sm font-semibold text-gray-600 hover:text-black transition"
+            className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition"
           >
             Submit Brand
           </a>
+          <div className="h-4 w-px bg-gray-200 dark:bg-gray-700" role="separator" aria-hidden="true"></div>
+          <ThemeToggle />
         </nav>
       </div>
 

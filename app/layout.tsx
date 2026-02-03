@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -80,23 +81,40 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#ffffff" />
+        {/* Prevent flash of wrong theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const theme = localStorage.getItem('theme') || 'system';
+                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const resolved = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+                document.documentElement.classList.add(resolved);
+                document.documentElement.setAttribute('data-theme', resolved);
+              } catch (e) {}
+            `,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Skip link for keyboard users - WCAG 2.4.1 */}
-        <a href="#main-content" className="skip-link">
-          Skip to main content
-        </a>
-        <div id="main-content">
-          {children}
-        </div>
+        <ThemeProvider>
+          {/* Skip link for keyboard users - WCAG 2.4.1 */}
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
+          <div id="main-content">
+            {children}
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );
 }
+
