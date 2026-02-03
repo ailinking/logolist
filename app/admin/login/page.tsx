@@ -24,7 +24,7 @@ export default function LoginPage() {
       } else {
         router.push("/admin")
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred")
     }
   }

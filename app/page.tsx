@@ -83,7 +83,7 @@ export default function Home() {
 
                 {logos.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                        {logos.map((company: any) => (
+                        {logos.map((company) => (
                         <CompanyCard key={company.id} company={company} />     
                         ))}
                     </div>
@@ -100,7 +100,7 @@ export default function Home() {
                         <div className="h-px bg-gray-300 flex-1"></div>        
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 opacity-90 hover:opacity-100 transition-opacity">     
-                        {favicons.map((company: any) => (
+                        {favicons.map((company) => (
                         <CompanyCard key={company.id} company={company} />     
                         ))}
                     </div>

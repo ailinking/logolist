@@ -1,0 +1,46 @@
+[1mdiff --git a/tsconfig.json b/tsconfig.json[m
+[1mindex 3a13f90..2627c60 100644[m
+[1m--- a/tsconfig.json[m
+[1m+++ b/tsconfig.json[m
+[36m@@ -1,7 +1,11 @@[m
+ {[m
+   "compilerOptions": {[m
+     "target": "ES2017",[m
+[31m-    "lib": ["dom", "dom.iterable", "esnext"],[m
+[32m+[m[32m    "lib": [[m
+[32m+[m[32m      "dom",[m
+[32m+[m[32m      "dom.iterable",[m
+[32m+[m[32m      "esnext"[m
+[32m+[m[32m    ],[m
+     "allowJs": true,[m
+     "skipLibCheck": true,[m
+     "strict": true,[m
+[36m@@ -11,7 +15,7 @@[m
+     "moduleResolution": "bundler",[m
+     "resolveJsonModule": true,[m
+     "isolatedModules": true,[m
+[31m-    "jsx": "react-jsx",[m
+[32m+[m[32m    "jsx": "preserve",[m
+     "incremental": true,[m
+     "plugins": [[m
+       {[m
+[36m@@ -19,7 +23,9 @@[m
+       }[m
+     ],[m
+     "paths": {[m
+[31m-      "@/*": ["./*"][m
+[32m+[m[32m      "@/*": [[m
+[32m+[m[32m        "./*"[m
+[32m+[m[32m      ][m
+     }[m
+   },[m
+   "include": [[m
+[36m@@ -30,5 +36,7 @@[m
+     ".next/dev/types/**/*.ts",[m
+     "**/*.mts"[m
+   ],[m
+[31m-  "exclude": ["node_modules"][m
+[32m+[m[32m  "exclude": [[m
+[32m+[m[32m    "node_modules"[m
+[32m+[m[32m  ][m
+ }[m

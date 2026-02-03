@@ -1,8 +1,15 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 
+type Metrics = {
+  searchSuccessRate: number
+  totalDownloads: number
+  totalCompanies: number
+  totalSearches: number
+}
+
 export default function KPIDashboard() {
-  const [metrics, setMetrics] = useState<any>(null)
+  const [metrics, setMetrics] = useState<Metrics | null>(null)
 
   useEffect(() => {
     fetch('/api/metrics').then(res => res.json()).then(setMetrics)
