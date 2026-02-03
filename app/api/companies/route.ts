@@ -115,7 +115,7 @@ export async function GET(request: Request) {
           headers: { 'Authorization': `Bearer ${BRANDFETCH_API_KEY}` }
       })
       if (res.ok) {
-          const data = await res.json() as AppStoreSearchResponse as BrandfetchSearchItem[]
+          const data = await res.json() as BrandfetchSearchItem[]
           brandfetchCompanies = data.map((item) => ({
               id: item.brandId,
               name: item.name,
@@ -137,7 +137,7 @@ export async function GET(request: Request) {
   try {
     const res = await fetch(`https://itunes.apple.com/search?term=${query}&entity=software&limit=5`)
     if (res.ok) {
-      const data = await res.json()
+      const data = await res.json() as AppStoreSearchResponse
       appStoreCompanies = data.results.map((item) => ({
         id: `appstore-${item.trackId}`,
         name: item.trackName,
@@ -243,3 +243,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to process request" }, { status: 500 })
   }
 }
+

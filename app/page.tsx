@@ -88,7 +88,7 @@ export default function Home() {
                         ))}
                     </div>
                 ) : (
-                    !loading && query && <div className="text-gray-400 italic py-8 text-center bg-white rounded-xl border border-dashed border-gray-200">No brand logos found matching "{query}"</div>
+                    !loading && query && <div className="text-gray-400 italic py-8 text-center bg-white rounded-xl border border-dashed border-gray-200">No brand logos found matching &quot;{query}&quot;</div>
                 )}
             </section>
 
@@ -112,7 +112,7 @@ export default function Home() {
                 <div className="text-6xl mb-4"></div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">No results found</h3>
                 <p className="text-gray-500 max-w-md mx-auto">
-                    We couldn't find any companies matching "{query}". Try searching for a domain (e.g. example.com) to automatically discover it.
+                    We couldn&apos;t find any companies matching &quot;{query}&quot;. Try searching for a domain (e.g. example.com) to automatically discover it.
                 </p>
               </div>
             )}
@@ -126,3 +126,4 @@ export default function Home() {
     </div>
   )
 }
+
