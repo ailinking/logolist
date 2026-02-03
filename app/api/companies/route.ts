@@ -20,6 +20,26 @@ interface EnrichedCompany {
   industry?: string
 }
 
+interface BrandfetchSearchItem {
+  brandId: string
+  name: string
+  domain: string
+  icon?: string
+  description?: string
+}
+
+interface AppStoreSearchResult {
+  trackId: number
+  trackName: string
+  artworkUrl512?: string
+  artworkUrl100?: string
+  description?: string
+}
+
+interface AppStoreSearchResponse {
+  results: AppStoreSearchResult[]
+}
+
 const isDomain = (str: string) => /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/.test(str)
 
 const getNameFromDomain = (domain: string) => {
@@ -95,8 +115,8 @@ export async function GET(request: Request) {
           headers: { 'Authorization': `Bearer ${BRANDFETCH_API_KEY}` }
       })
       if (res.ok) {
-          const data = await res.json()
-          brandfetchCompanies = data.map((item: any) => ({
+          const data = await res.json() as BrandfetchSearchItem[]
+          brandfetchCompanies = data.map((item) => ({
               id: item.brandId,
               name: item.name,
               domain: item.domain,
@@ -117,8 +137,8 @@ export async function GET(request: Request) {
   try {
     const res = await fetch(`https://itunes.apple.com/search?term=${query}&entity=software&limit=5`)
     if (res.ok) {
-      const data = await res.json()
-      appStoreCompanies = data.results.map((item: any) => ({
+      const data = await res.json() as AppStoreSearchResponse
+      appStoreCompanies = data.results.map((item) => ({
         id: `appstore-${item.trackId}`,
         name: item.trackName,
         domain: "App Store",
@@ -223,3 +243,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to process request" }, { status: 500 })
   }
 }
+
